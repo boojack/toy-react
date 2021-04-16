@@ -1,0 +1,14 @@
+{
+  "name": "react-impl",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^4.1.2",
+    "vite": "^2.1.5"
+  }
+}
