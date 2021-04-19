@@ -1,6 +1,17 @@
 {
-  "name": "react-impl",
-  "version": "0.0.0",
+  "name": "sreact",
+  "version": "0.0.1",
+  "private": false,
+  "description": "Fast React-compatible Virtual DOM library.",
+  "author": "boojack",
+  "keywords": [
+    "react",
+    "vdom"
+  ],
+  "homepage": "https://github.com/boojack/simple-react-impl",
+  "bugs": {
+    "url": "https://github.com/boojack/simple-react-impl/issues"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
