@@ -15,5 +15,5 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["./src", "./packages", "./test"]
+  "include": ["./packages", "./test"]
 }
