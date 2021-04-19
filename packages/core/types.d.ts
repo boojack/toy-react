@@ -1,3 +1,7 @@
+interface IterableObject {
+  [key: string]: any;
+}
+
 type AttrProps = Partial<{
   id: string;
   class: string;
@@ -15,12 +19,7 @@ type Props = Partial<BaseProps>;
 
 type FunctionComponent = <T>(props?: T) => VElement;
 
-type VElement =
-  | string
-  | {
-      type: string | FunctionComponent;
-      props: Props;
-    };
+type VElement = string | VDOMElement | FunctionElement;
 
 interface VDOMElement {
   type: string;
