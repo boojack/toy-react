@@ -1,4 +1,4 @@
-import { rerender } from "../core/render";
+import { rerender } from "./render";
 
 const _states: any[] = [];
 let _curor = 0;

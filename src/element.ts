@@ -1,4 +1,4 @@
-import { utils } from "../utils/baseUtils";
+import { utils } from "./utils";
 import { diffVElementProps } from "./diff";
 import { instantiateComponent } from "./render";
 
@@ -91,11 +91,16 @@ export class DOMComponent extends VNodeComponent {
     const prevElement = this.currentElement;
     this.currentElement = nextElement;
 
-    if (typeof prevElement !== typeof nextElement || (typeof prevElement === "string" && typeof nextElement === "string")) {
+    if (typeof prevElement !== typeof nextElement) {
       const nextRenderedComponent = instantiateComponent(nextElement);
       const nextNode = nextRenderedComponent.mount();
       this.node = nextNode;
       node?.parentNode?.replaceChild(nextNode, node);
+      return;
+    } else if (typeof prevElement === "string" && typeof nextElement === "string") {
+      if (prevElement !== nextElement) {
+        this.node!.textContent = nextElement;
+      }
       return;
     } else if (typeof prevElement === "object" && typeof nextElement === "object") {
       const prevProps = prevElement.props as IterableObject;
@@ -142,7 +147,7 @@ export class DOMComponent extends VNodeComponent {
           continue;
         }
 
-        if (typeof prevChildren[i] !== typeof nextChildren[i] || (typeof prevChildren[i] === "string" && typeof nextChildren[i] === "string")) {
+        if (typeof prevChildren[i] !== typeof nextChildren[i]) {
           const prevNode = prevComponent.getHostNode();
           prevComponent.unmount();
 
@@ -166,6 +171,8 @@ export class DOMComponent extends VNodeComponent {
             nextRenderedComponents.push(nextChild);
             continue;
           }
+        } else if (typeof prevChildren[i] === "string" && typeof nextChildren[i] === "string") {
+          // do nth
         }
 
         prevComponent.receive(nextChildren[i]);
