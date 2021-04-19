@@ -1,10 +1,12 @@
+import { utils } from "../utils/baseUtils";
+import { diffVElementProps } from "./diff";
 import { instantiateComponent } from "./render";
 
 type DiffOperation = {
   type: "ADD" | "REPLACE" | "REMOVE";
   node: Node;
-  nextNode?: Node;
-  prevNode?: Node;
+  nextNode: Node;
+  prevNode: Node;
 };
 
 function createElement(type: string | FunctionComponent, props: Props): VElement {
@@ -51,9 +53,9 @@ export class DOMComponent extends VNodeComponent {
       if (key === "children") {
         // continue
       } else if (key === "onClick") {
-        node.addEventListener("click", (props as any)[key]);
+        node.addEventListener("click", (props as IterableObject)[key]);
       } else {
-        node.setAttribute(key, (props as any)[key] as string);
+        node.setAttribute(key, (props as IterableObject)[key] as string);
       }
     }
 
@@ -78,6 +80,7 @@ export class DOMComponent extends VNodeComponent {
     return node;
   }
 
+  // 主要是为了回调生命周期函数
   public unmount() {
     for (const comp of this.renderedComponents) {
       comp.unmount();
@@ -85,30 +88,44 @@ export class DOMComponent extends VNodeComponent {
   }
 
   public receive(nextElement: string | VDOMElement) {
-    const node = this.node as HTMLElement;
+    const node = this.node as Element;
     const prevElement = this.currentElement;
     this.currentElement = nextElement;
 
     if (typeof prevElement !== typeof nextElement) {
+      const nextRenderedComponent = instantiateComponent(nextElement);
+      const nextNode = nextRenderedComponent.mount();
+      this.node = nextNode;
+      node?.parentNode?.replaceChild(nextNode, node);
       return;
     } else if (typeof prevElement === "string" && typeof nextElement === "string") {
-      if (node) {
-        node.textContent = nextElement;
-      }
+      const nextRenderedComponent = instantiateComponent(nextElement);
+      const nextNode = nextRenderedComponent.mount();
+      this.node = nextNode;
+      node?.parentNode?.replaceChild(nextNode, node);
       return;
     } else if (typeof prevElement === "object" && typeof nextElement === "object") {
-      const prevProps = prevElement.props;
-      const nextProps = nextElement.props;
-      // 删除旧的属性
-      Object.keys(prevProps).forEach((propName) => {
-        if (propName !== "children" && !nextProps.hasOwnProperty(propName)) {
+      const prevProps = prevElement.props as IterableObject;
+      const nextProps = nextElement.props as IterableObject;
+
+      const props = diffVElementProps(prevProps, nextProps);
+
+      Object.keys(props).forEach((propName) => {
+        const value = props[propName];
+
+        if (value === null) {
           node.removeAttribute(propName);
+        } else {
+          node.setAttribute(propName, props[propName]);
         }
-      });
-      // 设置新的属性
-      Object.keys(nextProps).forEach((propName) => {
-        if (propName !== "children") {
-          node.setAttribute(propName, (nextProps as IterableObject)[propName]);
+
+        // 处理事件
+        if (utils.isFunction(value)) {
+          const eventName = utils.parseEventName(propName);
+          if (utils.isFunction(prevProps[propName])) {
+            node.removeEventListener(eventName, prevProps[propName]);
+          }
+          node.addEventListener(eventName, nextProps[propName]);
         }
       });
 
@@ -139,28 +156,32 @@ export class DOMComponent extends VNodeComponent {
         }
 
         if (typeof prevChildren[i] !== typeof nextChildren[i]) {
-          console.log("here");
-          let prevNode = prevComponent.getHostNode();
+          const prevNode = prevComponent.getHostNode();
           prevComponent.unmount();
 
-          let nextChild = instantiateComponent(nextChildren[i]);
-          let nextNode = nextChild.mount();
+          const nextChild = instantiateComponent(nextChildren[i]);
+          const nextNode = nextChild.mount();
 
           // 记录我们需要替换的节点
           operationQueue.push({ type: "REPLACE", prevNode, nextNode });
           nextRenderedComponents.push(nextChild);
           continue;
         } else if (typeof prevChildren[i] === "string" && typeof nextChildren[i] === "string") {
-          console.log("here");
+          // const prevNode = prevComponent.getHostNode();
+          // prevComponent.unmount();
+          // const nextChild = instantiateComponent(nextChildren[i]);
+          // const nextNode = nextChild.mount();
+          // // 记录我们需要替换的节点
+          // operationQueue.push({ type: "REPLACE", prevNode, nextNode });
+          // nextRenderedComponents.push(nextChild);
+          // continue;
         } else if (typeof prevChildren[i] === "object" && typeof nextChildren[i] === "object") {
-          console.log(prevChildren[i], nextChildren[i], "here");
-          if ((prevChildren[i] as any).type !== (nextChildren[i] as any).type) {
-            console.log("her1e");
-            let prevNode = prevComponent.getHostNode();
+          if ((prevChildren[i] as CompositionElement).type !== (nextChildren[i] as CompositionElement).type) {
+            const prevNode = prevComponent.getHostNode();
             prevComponent.unmount();
 
-            let nextChild = instantiateComponent(nextChildren[i]);
-            let nextNode = nextChild.mount();
+            const nextChild = instantiateComponent(nextChildren[i]);
+            const nextNode = nextChild.mount();
 
             // 记录我们需要替换的节点
             operationQueue.push({ type: "REPLACE", prevNode, nextNode });
@@ -187,13 +208,14 @@ export class DOMComponent extends VNodeComponent {
 
       // 处理操作队列。
       while (operationQueue.length > 0) {
-        var operation = operationQueue.shift() as DiffOperation;
+        const operation = (operationQueue.shift() as unknown) as DiffOperation;
+
         switch (operation.type) {
           case "ADD":
             node.appendChild(operation.node);
             break;
           case "REPLACE":
-            node.replaceChild(operation.nextNode as Node, operation.prevNode as Node);
+            node.replaceChild(operation.nextNode, operation.prevNode);
             break;
           case "REMOVE":
             node.removeChild(operation.node);
@@ -219,14 +241,12 @@ export class DOMComponent extends VNodeComponent {
 export class CompositionComponent extends VNodeComponent {
   private currentElement: FunctionElement;
   private renderedComponent: VNodeComponent | null;
-  private node: Node | null;
 
   constructor(element: FunctionElement) {
     super();
 
     this.currentElement = element;
     this.renderedComponent = null;
-    this.node = null;
   }
 
   public mount(): Node {
@@ -251,12 +271,17 @@ export class CompositionComponent extends VNodeComponent {
   public receive(nextElement: FunctionElement) {
     const prevRenderedComponent = this.renderedComponent;
     const prevRenderedElement = prevRenderedComponent?.getVElement();
+    this.currentElement = nextElement;
 
-    const { type, props } = nextElement;
+    const { type, props: nextProps } = nextElement;
+    const nextRenderedElement = type(nextProps);
 
-    const nextRenderedElement = type(props);
-
-    if (typeof prevRenderedElement !== "string" && typeof nextRenderedElement !== "string") {
+    // 可能复用
+    if (typeof prevRenderedElement === "string" && typeof nextRenderedElement === "string") {
+      prevRenderedComponent?.receive(nextRenderedElement);
+      return;
+    }
+    if (typeof prevRenderedElement === "object" && typeof nextRenderedElement === "object") {
       if (prevRenderedElement?.type === nextRenderedElement.type) {
         prevRenderedComponent?.receive(nextRenderedElement);
         return;
@@ -264,14 +289,13 @@ export class CompositionComponent extends VNodeComponent {
     }
 
     const prevNode = prevRenderedComponent?.getHostNode();
-    prevRenderedComponent?.unmount();
 
+    // 卸载旧节点，并挂载新节点
+    prevRenderedComponent?.unmount();
     const nextRenderedComponent = instantiateComponent(nextRenderedElement);
     const nextNode = nextRenderedComponent.mount();
 
-    this.currentElement = nextElement;
     this.renderedComponent = nextRenderedComponent;
-
     prevNode?.parentNode?.replaceChild(nextNode, prevNode);
   }
 
@@ -279,11 +303,11 @@ export class CompositionComponent extends VNodeComponent {
     return this.currentElement;
   }
 
-  public getHostNode(): Node {
-    return this.node as Node;
-  }
-
   public getRenderedComponent() {
     return this.renderedComponent;
+  }
+
+  public getHostNode(): Node {
+    return this.renderedComponent?.getHostNode() as Node;
   }
 }

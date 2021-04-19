@@ -1,30 +1,26 @@
 import { CompositionComponent, DOMComponent, VNodeComponent } from "./element";
 
-let rootNodeCache: Element | null = null;
+let velementCache: VElement | null = null;
+let containerNodeCache: Element | null = null;
 
-function unmountTree(containerNode: Node) {
-  // 从 DOM 节点读取内部实例:
-  var node = containerNode.firstChild;
+function unmountTree(containerNode: Element) {
+  const node = containerNode.firstChild;
+  const rootComponent = (node as any)._internalInstance;
 
-  if (!node) {
-    return;
+  if (rootComponent) {
+    rootComponent.unmount();
   }
 
-  var rootComponent = (node as any)._internalInstance;
-
-  if (!rootComponent) {
-    return;
-  }
-
-  // 卸载树并清空容器
-  rootComponent.unmount();
-  (containerNode as HTMLElement).innerHTML = "";
+  containerNode.innerHTML = "";
 }
 
 export function render(velement: VElement, containerNode: Element) {
+  velementCache = velement;
+  containerNodeCache = containerNode;
+
   if (containerNode.firstChild) {
-    const preChild = containerNode.firstChild;
-    const preRootComponent = (preChild as any)._internalInstance as VNodeComponent;
+    const firstChild = containerNode.firstChild;
+    const preRootComponent = (firstChild as any)._internalInstance as VNodeComponent;
     const preElement = preRootComponent.getVElement();
 
     if (typeof preElement === "object" && typeof velement === "object") {
@@ -45,16 +41,11 @@ export function render(velement: VElement, containerNode: Element) {
 
   containerNode.appendChild(node);
   (node as any)._internalInstance = rootComponent;
-  rootNodeCache = containerNode;
 }
 
 export function rerender() {
-  if (rootNodeCache) {
-    const preRootComponent = (rootNodeCache.firstChild as any)._internalInstance;
-
-    if (preRootComponent) {
-      render(preRootComponent.getVElement(), rootNodeCache);
-    }
+  if (velementCache && containerNodeCache) {
+    render(velementCache, containerNodeCache);
   }
 }
 

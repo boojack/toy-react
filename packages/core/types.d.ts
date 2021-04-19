@@ -2,14 +2,21 @@ interface IterableObject {
   [key: string]: any;
 }
 
-type AttrProps = Partial<{
-  id: string;
-  class: string;
-}>;
+type AttrKey = "id" | "class";
 
-type EventProps = Partial<{
-  onClick: Function;
-}>;
+type AttrProps = Partial<
+  {
+    [key in AttrKey]: string;
+  }
+>;
+
+type EventKey = "onClick";
+
+type EventProps = Partial<
+  {
+    [key in EventKey]: Function;
+  }
+>;
 
 interface BaseProps extends AttrProps, EventProps {
   children: VElement[];
@@ -19,7 +26,8 @@ type Props = Partial<BaseProps>;
 
 type FunctionComponent = <T>(props?: T) => VElement;
 
-type VElement = string | VDOMElement | FunctionElement;
+type VElement = string | CompositionElement;
+type CompositionElement = VDOMElement | FunctionElement;
 
 interface VDOMElement {
   type: string;

@@ -1,5 +1,5 @@
 {
-  "name": "sreact",
+  "name": "sreactjs",
   "version": "0.0.1",
   "private": false,
   "description": "Fast React-compatible Virtual DOM library.",
@@ -17,9 +17,10 @@
     "build": "tsc && vite build",
     "serve": "vite preview"
   },
-  "dependencies": {},
-  "devDependencies": {
-    "typescript": "^4.1.2",
+  "dependencies": {
     "vite": "^2.1.5"
+  },
+  "devDependencies": {
+    "typescript": "^4.1.2"
   }
 }
