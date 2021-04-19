@@ -3,26 +3,12 @@ interface IterableObject {
 }
 
 type AttrKey = "id" | "class";
-
-type AttrProps = Partial<
-  {
-    [key in AttrKey]: string;
-  }
->;
-
 type EventKey = "onClick";
 
-type EventProps = Partial<
-  {
-    [key in EventKey]: Function;
-  }
->;
-
-interface BaseProps extends AttrProps, EventProps {
+type Props = Partial<{
+  [key: string]: string | Function | Object;
   children: VElement[];
-}
-
-type Props = Partial<BaseProps>;
+}>;
 
 type FunctionComponent = <T>(props?: T) => VElement;
 
