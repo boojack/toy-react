@@ -1,18 +1,15 @@
 {
   "name": "sreactjs",
-  "version": "0.0.2",
-  "private": true,
+  "version": "0.0.4",
+  "private": false,
   "description": "Fast React-compatible Virtual DOM library.",
-  "author": "boojack",
-  "keywords": [
-    "react",
-    "vdom"
+  "main": "dist/index.js",
+  "files": [
+    "dist/*.js",
+    "dist/*.map",
+    "dist/types/*"
   ],
-  "license": "MIT",
-  "homepage": "https://github.com/boojack/simple-react-impl",
-  "bugs": {
-    "url": "https://github.com/boojack/simple-react-impl/issues"
-  },
+  "typings": "dist/types/index.d.ts",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
@@ -29,5 +26,15 @@
   "devDependencies": {
     "typescript": "^4.1.2",
     "vite": "^2.1.5"
+  },
+  "author": "boojack",
+  "keywords": [
+    "react",
+    "vdom"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/boojack/simple-react-impl",
+  "bugs": {
+    "url": "https://github.com/boojack/simple-react-impl/issues"
   }
 }

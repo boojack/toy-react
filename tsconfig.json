@@ -1,19 +1,20 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
-    "lib": ["DOM", "DOM.Iterable", "ESNext"],
-    "types": [],
-    "allowJs": false,
-    "skipLibCheck": false,
-    "esModuleInterop": false,
+    "module": "ES6",
+    "lib": ["es6", "dom", "esnext"],
+    "target": "ES2015",
     "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true
+    "removeComments": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "declaration": true,
+    "declarationDir": "dist/types/",
+    "outDir": "dist",
+    "rootDir": "src"
+    // "jsx": "react",
+    // "jsxFactory": "h",
+    // "jsxFragmentFactory": "Fragment"
   },
-  "include": ["./src", "./test", "./demo"]
+  "exclude": ["node_modules", "dist"],
+  "include": ["src"]
 }
