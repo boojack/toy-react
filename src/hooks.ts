@@ -1,23 +1,24 @@
 import { rerender } from "./render";
 
-const _states: any[] = [];
-let _curor = 0;
+const states: any[] = [];
+let stateCount = 0;
 
-export function useState<T>(state: T) {
-  const index = _curor;
-  let _s = _states[index] ?? state;
+export function useState<T>(defaultValue: T): [T, Function] {
+  const index = stateCount;
+  const currentValue = states[index] ?? defaultValue;
 
-  if (_states[index] === undefined) {
-    _states[index] = state;
+  if (states[index] === undefined) {
+    states[index] = defaultValue;
   }
 
-  let setState = (val: T) => {
-    _states[index] = val;
-    _curor = 0;
+  const setState = (val: T) => {
+    states[index] = val;
+
+    stateCount = 0;
     rerender();
   };
 
-  _curor++;
+  stateCount++;
 
-  return [_s, setState];
+  return [currentValue, setState];
 }
