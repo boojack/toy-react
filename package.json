@@ -1,6 +1,6 @@
 {
   "name": "sreactjs",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": false,
   "description": "Fast React-compatible Virtual DOM library.",
   "main": "dist/index.js",
@@ -12,8 +12,7 @@
   "typings": "dist/types/index.d.ts",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "serve": "vite preview"
+    "build": "tsc"
   },
   "workspaces": [
     "packages/*"
