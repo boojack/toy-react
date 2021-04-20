@@ -1,7 +1,10 @@
-import { utils } from "./utils";
+/**
+ * stack reconciler implementation
+ */
+import { AttrKey, EventKey, FunctionElement, IterableObject, VDOMElement, VElement } from "./types";
 import { diffVElementProps } from "./diff";
 import { instantiateComponent } from "./render";
-import { AttrKey, EventKey, FunctionElement, IterableObject, VDOMElement, VElement } from "./types";
+import { utils } from "./utils";
 
 export abstract class VNodeComponent {
   abstract mount(): Node;

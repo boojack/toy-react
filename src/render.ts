@@ -1,4 +1,4 @@
-import { CompositionComponent, DOMComponent, VNodeComponent } from "./element";
+import { CompositionComponent, DOMComponent, VNodeComponent } from "./reconciler";
 import { FunctionElement, VDOMElement, VElement } from "./types";
 
 // dom render variable cache

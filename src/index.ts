@@ -1,4 +1,5 @@
 export * from "./types";
-export { h, h as createElement } from "./createElement";
+
+export { createElement, createElement as h, textNode, textNode as t } from "./dom";
 export { useState } from "./hooks";
 export { render } from "./render";
