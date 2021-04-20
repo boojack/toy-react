@@ -1,3 +1,5 @@
+import { IterableObject, Props } from "./types";
+
 /**
  * Compare two props and figure out the difference props
  * @param prevProps

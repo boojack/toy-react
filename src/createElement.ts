@@ -1,3 +1,5 @@
+import { FunctionComponent, Props, VElement } from "./types";
+
 /**
  * create virtual element
  * @param type string / function / "textNode"

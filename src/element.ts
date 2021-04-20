@@ -1,6 +1,7 @@
 import { utils } from "./utils";
 import { diffVElementProps } from "./diff";
 import { instantiateComponent } from "./render";
+import { AttrKey, EventKey, FunctionElement, IterableObject, VDOMElement, VElement } from "./types";
 
 export abstract class VNodeComponent {
   abstract mount(): Node;

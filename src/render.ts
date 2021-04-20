@@ -1,4 +1,5 @@
 import { CompositionComponent, DOMComponent, VNodeComponent } from "./element";
+import { FunctionElement, VDOMElement, VElement } from "./types";
 
 // dom render variable cache
 let velementCache: VElement | null = null;
