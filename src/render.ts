@@ -15,12 +15,7 @@ export function render(velement: VElement, containerNode: Element): void {
     if (Boolean(preRootComponent)) {
       const preElement = preRootComponent.getVElement();
 
-      if (typeof preElement === "object" && typeof velement === "object") {
-        if (preElement.type === velement.type) {
-          preRootComponent.receive(velement);
-          return;
-        }
-      } else if (typeof preElement === "string" && typeof velement === "string") {
+      if (preElement.type === velement.type) {
         preRootComponent.receive(velement);
         return;
       }
@@ -44,14 +39,10 @@ export function rerender(): void {
 }
 
 export function instantiateComponent(velement: VElement): VNodeComponent {
-  if (typeof velement === "string") {
-    return new DOMComponent(velement);
+  if (typeof velement.type === "string") {
+    return new DOMComponent(velement as VDOMElement);
   } else {
-    if (typeof velement.type === "string") {
-      return new DOMComponent(velement as VDOMElement);
-    } else {
-      return new CompositionComponent(velement as FunctionElement);
-    }
+    return new CompositionComponent(velement as FunctionElement);
   }
 }
 

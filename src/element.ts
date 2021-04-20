@@ -2,22 +2,6 @@ import { utils } from "./utils";
 import { diffVElementProps } from "./diff";
 import { instantiateComponent } from "./render";
 
-type DiffOperation = {
-  type: "ADD" | "REPLACE" | "REMOVE";
-  node: Node;
-  nextNode: Node;
-  prevNode: Node;
-};
-
-function createElement(type: string | FunctionComponent, props: Props): VElement {
-  return {
-    type,
-    props,
-  } as VDOMElement | FunctionElement;
-}
-
-export const h = createElement;
-
 export abstract class VNodeComponent {
   abstract mount(): Node;
   abstract unmount(): void;
@@ -28,11 +12,11 @@ export abstract class VNodeComponent {
 }
 
 export class DOMComponent extends VNodeComponent {
-  private currentElement: string | VDOMElement;
+  private currentElement: VDOMElement;
   private renderedComponents: VNodeComponent[];
   private node: Node | null;
 
-  constructor(element: string | VDOMElement) {
+  constructor(element: VDOMElement) {
     super();
 
     this.currentElement = element;
@@ -41,13 +25,14 @@ export class DOMComponent extends VNodeComponent {
   }
 
   public mount(): Node {
-    if (typeof this.currentElement === "string") {
-      const textNode = document.createTextNode(this.currentElement);
+    const { type, props } = this.currentElement;
+
+    if (type === "textNode") {
+      const textNode = document.createTextNode(props.nodeValue ?? "");
       this.node = textNode;
       return textNode;
     }
 
-    const { type, props } = this.currentElement;
     const node = document.createElement(type);
     const iterProps = props as IterableObject;
 
@@ -86,68 +71,83 @@ export class DOMComponent extends VNodeComponent {
     }
   }
 
-  public receive(nextElement: string | VDOMElement) {
+  public receive(nextElement: VDOMElement) {
     const node = this.node as Element;
     const prevElement = this.currentElement;
     this.currentElement = nextElement;
 
-    if (typeof prevElement !== typeof nextElement) {
+    const prevType = prevElement.type;
+    const nextType = nextElement.type;
+    const prevProps = prevElement.props as IterableObject;
+    const nextProps = nextElement.props as IterableObject;
+
+    if (prevType !== nextType) {
       const nextRenderedComponent = instantiateComponent(nextElement);
       const nextNode = nextRenderedComponent.mount();
       this.node = nextNode;
-      node?.parentNode?.replaceChild(nextNode, node);
+      node.parentNode!.replaceChild(nextNode, node);
       return;
-    } else if (typeof prevElement === "string" && typeof nextElement === "string") {
-      if (prevElement !== nextElement) {
-        this.node!.textContent = nextElement;
+    }
+
+    if (prevType === "textNode" && nextType === "textNode") {
+      if (prevProps.nodeValue !== nextProps.nodeValue) {
+        node.textContent = nextProps.nodeValue ?? "";
       }
       return;
-    } else if (typeof prevElement === "object" && typeof nextElement === "object") {
-      const prevProps = prevElement.props as IterableObject;
-      const nextProps = nextElement.props as IterableObject;
-      const props = diffVElementProps(prevProps, nextProps);
+    }
 
-      Object.keys(props).forEach((propName) => {
-        const value = props[propName];
+    const props = diffVElementProps(prevProps, nextProps);
 
-        if (value === null) {
-          node.removeAttribute(propName);
-        } else if (utils.isFunction(value)) {
-          const eventName = utils.parseEventName(propName);
+    Object.keys(props).forEach((propName) => {
+      const value = props[propName];
 
-          if (utils.isFunction(prevProps[propName])) {
-            node.removeEventListener(eventName, prevProps[propName]);
-          }
-          node.addEventListener(eventName, nextProps[propName]);
-        } else {
-          node.setAttribute(propName, value);
+      if (value === null) {
+        node.removeAttribute(propName);
+      } else if (utils.isFunction(value)) {
+        const eventName = utils.parseEventName(propName);
+
+        if (utils.isFunction(prevProps[propName])) {
+          node.removeEventListener(eventName, prevProps[propName]);
         }
-      });
+        node.addEventListener(eventName, nextProps[propName]);
+      } else {
+        node.setAttribute(propName, value);
+      }
+    });
 
-      const prevChildren = prevProps.children ?? [];
-      const nextChildren = nextProps.children ?? [];
+    const prevChildren = prevProps.children ?? [];
+    const nextChildren = nextProps.children ?? [];
 
-      const prevRenderedComponents = this.renderedComponents;
-      const nextRenderedComponents = [];
+    const prevRenderedComponents = this.renderedComponents;
+    const nextRenderedComponents = [];
 
-      const operationQueue = [];
+    const operationQueue = [];
 
-      for (let i = 0; i < nextChildren.length; ++i) {
-        const prevComponent = prevRenderedComponents[i];
+    for (let i = 0; i < nextChildren.length; ++i) {
+      const prevComponent = prevRenderedComponents[i];
 
-        if (!prevComponent) {
-          const nextComponent = instantiateComponent(nextChildren[i]);
-          const node = nextComponent.mount();
+      if (!prevComponent) {
+        const nextComponent = instantiateComponent(nextChildren[i]);
+        const node = nextComponent.mount();
 
-          operationQueue.push({
-            type: "ADD",
-            node,
-          });
-          nextRenderedComponents.push(nextComponent);
-          continue;
-        }
+        operationQueue.push({ type: "ADD", node });
+        nextRenderedComponents.push(nextComponent);
+        continue;
+      }
 
-        if (typeof prevChildren[i] !== typeof nextChildren[i]) {
+      if (typeof prevChildren[i] !== typeof nextChildren[i]) {
+        const prevNode = prevComponent.getHostNode();
+        prevComponent.unmount();
+
+        const nextChild = instantiateComponent(nextChildren[i]);
+        const nextNode = nextChild.mount();
+
+        // 记录需要替换的节点
+        operationQueue.push({ type: "REPLACE", prevNode, nextNode });
+        nextRenderedComponents.push(nextChild);
+        continue;
+      } else if (typeof prevChildren[i] === "object" && typeof nextChildren[i] === "object") {
+        if ((prevChildren[i] as VElement).type !== (nextChildren[i] as VElement).type) {
           const prevNode = prevComponent.getHostNode();
           prevComponent.unmount();
 
@@ -158,50 +158,37 @@ export class DOMComponent extends VNodeComponent {
           operationQueue.push({ type: "REPLACE", prevNode, nextNode });
           nextRenderedComponents.push(nextChild);
           continue;
-        } else if (typeof prevChildren[i] === "object" && typeof nextChildren[i] === "object") {
-          if ((prevChildren[i] as CompositionElement).type !== (nextChildren[i] as CompositionElement).type) {
-            const prevNode = prevComponent.getHostNode();
-            prevComponent.unmount();
-
-            const nextChild = instantiateComponent(nextChildren[i]);
-            const nextNode = nextChild.mount();
-
-            // 记录需要替换的节点
-            operationQueue.push({ type: "REPLACE", prevNode, nextNode });
-            nextRenderedComponents.push(nextChild);
-            continue;
-          }
-        } else if (typeof prevChildren[i] === "string" && typeof nextChildren[i] === "string") {
-          // do nth
         }
-
-        prevComponent.receive(nextChildren[i]);
-        nextRenderedComponents.push(prevComponent);
+      } else if (typeof prevChildren[i] === "string" && typeof nextChildren[i] === "string") {
+        // do nth
       }
 
-      for (let j = nextChildren.length; j < prevChildren.length; j++) {
-        const prevChild = prevRenderedComponents[j];
-        const node = prevChild.getHostNode();
-        prevChild.unmount();
+      prevComponent.receive(nextChildren[i]);
+      nextRenderedComponents.push(prevComponent);
+    }
 
-        // 记录需要删除的节点
-        operationQueue.push({ type: "REMOVE", node });
-      }
+    for (let j = nextChildren.length; j < prevChildren.length; j++) {
+      const prevChild = prevRenderedComponents[j];
+      const node = prevChild.getHostNode();
+      prevChild.unmount();
 
-      this.renderedComponents = nextRenderedComponents;
+      // 记录需要删除的节点
+      operationQueue.push({ type: "REMOVE", node });
+    }
 
-      for (const operation of operationQueue) {
-        switch (operation.type) {
-          case "ADD":
-            node.appendChild(operation.node!);
-            break;
-          case "REPLACE":
-            node.replaceChild(operation.nextNode!, operation.prevNode!);
-            break;
-          case "REMOVE":
-            node.removeChild(operation.node!);
-            break;
-        }
+    this.renderedComponents = nextRenderedComponents;
+
+    for (const operation of operationQueue) {
+      switch (operation.type) {
+        case "ADD":
+          node.appendChild(operation.node!);
+          break;
+        case "REPLACE":
+          node.replaceChild(operation.nextNode!, operation.prevNode!);
+          break;
+        case "REMOVE":
+          node.removeChild(operation.node!);
+          break;
       }
     }
   }
@@ -247,28 +234,22 @@ export class CompositionComponent extends VNodeComponent {
   }
 
   public receive(nextElement: FunctionElement) {
-    const prevRenderedComponent = this.renderedComponent;
-    const prevRenderedElement = prevRenderedComponent?.getVElement();
+    const prevRenderedComponent = this.renderedComponent as VNodeComponent;
+    const prevRenderedElement = prevRenderedComponent.getVElement();
     this.currentElement = nextElement;
 
     const { type, props: nextProps } = nextElement;
     const nextRenderedElement = type(nextProps);
 
     // 尝试复用
-    if (typeof prevRenderedElement === "string" && typeof nextRenderedElement === "string") {
-      prevRenderedComponent?.receive(nextRenderedElement);
+    if (prevRenderedElement.type === nextRenderedElement.type) {
+      prevRenderedComponent.receive(nextRenderedElement);
       return;
-    }
-    if (typeof prevRenderedElement === "object" && typeof nextRenderedElement === "object") {
-      if (prevRenderedElement?.type === nextRenderedElement.type) {
-        prevRenderedComponent?.receive(nextRenderedElement);
-        return;
-      }
     }
 
     // 卸载旧节点，并挂载新节点
-    const prevNode = prevRenderedComponent?.getHostNode();
-    prevRenderedComponent?.unmount();
+    const prevNode = prevRenderedComponent.getHostNode();
+    prevRenderedComponent.unmount();
     const nextRenderedComponent = instantiateComponent(nextRenderedElement);
     const nextNode = nextRenderedComponent.mount();
 
